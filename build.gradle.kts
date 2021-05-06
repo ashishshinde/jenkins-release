@@ -11,6 +11,8 @@ plugins {
     // Apply the java-library plugin for API and implementation separation.
     `java-library`
 
+    `maven-publish`
+
     id("net.researchgate.release") version "2.8.1"
 }
 
@@ -18,6 +20,36 @@ repositories {
     // Use jcenter for resolving dependencies.
     // You can declare any Maven/Ivy/file repository here.
     jcenter()
+}
+
+tasks.getByName("afterReleaseBuild").dependsOn("publish")
+
+publishing {
+    publications {
+        create<MavenPublication>("maven") {
+            groupId = "com.ashishshinde"
+            artifactId = "jenkins-release"
+            version = project.version.toString()
+
+            from(components["java"])
+        }
+    }
+    repositories {
+        val repositoryUrl =
+            uri("https://maven.pkg.github.com/ashishshinde/jenkins-release")
+
+        val pkgRepoUser: String by project
+        val pkgRepoPassword: String by project
+
+        maven {
+            name = "AerospikeMavenRepo"
+            url = repositoryUrl
+            credentials {
+                username = pkgRepoUser
+                password = pkgRepoPassword
+            }
+        }
+    }
 }
 
 dependencies {
