@@ -4,6 +4,8 @@
  * This generated file contains a sample Kotlin library project to get you started.
  */
 
+import net.researchgate.release.ReleaseExtension
+
 plugins {
     // Apply the Kotlin JVM plugin to add support for Kotlin.
     id("org.jetbrains.kotlin.jvm") version "1.3.72"
@@ -50,6 +52,10 @@ publishing {
             }
         }
     }
+}
+
+project.extensions.configure(ReleaseExtension::class) {
+    tagTemplate = "\$name-\$version"
 }
 
 dependencies {
