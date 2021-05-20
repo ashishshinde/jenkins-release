@@ -28,7 +28,12 @@ pipeline {
                     steps {
                         echo "Releasing .. ${params.module}"
                         sh "echo  ${module} ${version} ${releaseNotes}"
-                        sh "./gradlew --no-daemon release -Prelease.useAutomaticVersion=true -Prelease.releaseVersion=${version}"
+                        def moduleDir = params.module.replaceFirst("aerospike-","")
+                        dir(moduleDir) {
+                            sh "echo ${releaseNotes} "
+                            sh "pwd"
+                            sh "./gradlew --no-daemon release -Prelease.useAutomaticVersion=true -Prelease.releaseVersion=${version}"
+                        }
                     }
                 }
             }

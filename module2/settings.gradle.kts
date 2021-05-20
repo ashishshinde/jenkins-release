@@ -7,18 +7,4 @@
  * in the user manual at https://docs.gradle.org/6.6/userguide/multi_project_builds.html
  */
 
-include(
-    "module1",
-    "module2"
-)
-
-rootProject.name = "aerospike-jenkins"
-
-// Add prefix to child project names.
-rootProject.children.forEach { it.name = "aerospike-" + it.name }
-
-buildscript {
-    repositories {
-        jcenter()
-    }
-}
+rootProject.name = "module2"
