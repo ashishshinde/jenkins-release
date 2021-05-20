@@ -1,0 +1,50 @@
+pipeline {
+    agent any
+
+    options {
+        disableConcurrentBuilds()
+        buildDiscarder(logRotator(numToKeepStr: '5', artifactNumToKeepStr: '5'))
+    }
+
+    stages {
+        stage("Pipeline" ) {
+            options {
+              lock("cirya-server")
+            }
+
+            stages {
+                stage("Checkout") {
+                    steps {
+                        checkout([
+                            $class: 'GitSCM',
+                            branches: scm.branches,
+                            extensions: scm.extensions + [[$class: 'CleanBeforeCheckout']],
+                            userRemoteConfigs: scm.userRemoteConfigs
+                        ])
+                    }
+                }
+
+                stage("Release") {
+                    steps {
+                        echo "Releasing .. ${params.module}"
+                        sh "echo  ${module} ${version} ${releaseNotes}"
+                        sh "./gradlew --no-daemon release -Prelease.useAutomaticVersion=true -Prelease.releaseVersion=${version}"
+                    }
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            archiveArtifacts artifacts: '**/build/test-results/**/*.xml'
+
+            archiveArtifacts artifacts: '**/build/libs/**/*.jar,**/build/distributions/*', fingerprint: true
+            junit testResults: '**/build/test-results/**/*.xml', keepLongStdio: true
+            step( [ $class: 'JacocoPublisher' ] )
+        }
+        cleanup {
+            cleanWs()
+        }
+    }
+}
