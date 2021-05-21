@@ -717,10 +717,9 @@ subprojects {
      */
     task("publishGithubRelease", Task::class) {
         // Ensure all assets are ready before publish.
-        dependsOn("publish")
+        dependsOn("release")
 
         doLast {
-            println("@@@@@")
             com.aerospike.connect.gradle.GithubRelease.publishRelease(
                 githubReleaseConfiguration
             )
