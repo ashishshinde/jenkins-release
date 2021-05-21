@@ -699,7 +699,9 @@ subprojects {
                 project.extensions.configure(GithubReleaseExtension::class) {
                     println("Setting assets")
                     releaseAssets(*assets.toTypedArray())
-                    println("After setting: $releaseAssets")
+                    releaseAssets.forEach {
+                        println("After setting: ${it.name}")
+                    }
                 }
             }
         }
