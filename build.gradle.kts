@@ -643,6 +643,33 @@ subprojects {
      * Create the list of all assets to be uploaded to github.
      */
     task("prepareGithubReleaseTask", Task::class) {
+        project.extensions.configure(GithubReleaseExtension::class) {
+            val releaseVersion =
+                project.property("release.releaseVersion")
+            token(System.getenv("GITHUB_TOKEN"))
+            owner("ashishshinde")
+            repo("jenkins-release")
+            tagName("${project.name}-$releaseVersion")
+
+            val releaseName = "${
+                project.name.split("-")
+                    .joinToString(" ") { it.capitalize() }
+            } $releaseVersion"
+            releaseName(releaseName)
+
+
+            if (project.hasProperty("releaseNotesFile")) {
+                body(
+                    File(
+                        project.property("releaseNotesFile").toString()
+                    ).readText()
+                )
+            }
+
+            apiEndpoint("https://api.github.com")
+            client(okhttp3.OkHttpClient())
+        }
+
         doLast {
             if (project.hasProperty("release.releaseVersion")) {
                 val assets = getProjectFlavorSuffixes().map {
@@ -659,40 +686,14 @@ subprojects {
                         hash.toString().toByteArray(),
                         checkSumFile
                     )
-
-                    println("Checksum file $checkSumFile")
                 }
+
                 assets.addAll(
                     checkSumDir.listFiles()?.toList() ?: emptyList<File>()
                 )
 
                 checkSumDir.listFiles().forEach { println(it) }
-                project.extensions.configure(GithubReleaseExtension::class) {
-                    val releaseVersion =
-                        project.property("release.releaseVersion")
-                    token(System.getenv("GITHUB_TOKEN"))
-                    owner("ashishshinde")
-                    repo("jenkins-release")
-                    tagName("${project.name}-$releaseVersion")
-
-                    val releaseName = "${
-                        project.name.split("-")
-                            .joinToString(" ") { it.capitalize() }
-                    } $releaseVersion"
-                    releaseName(releaseName)
-
-                    releaseAssets(*assets.toTypedArray())
-                    if (project.hasProperty("releaseNotesFile")) {
-                        body(
-                            File(
-                                project.property("releaseNotesFile").toString()
-                            ).readText()
-                        )
-                    }
-
-                    apiEndpoint("https://api.github.com")
-                    client(okhttp3.OkHttpClient())
-                }
+                releaseAssets(*assets.toTypedArray())
             }
         }
     }
