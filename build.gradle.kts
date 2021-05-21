@@ -16,6 +16,7 @@ plugins {
     `maven-publish`
 
     id("net.researchgate.release") version "2.8.1"
+    id("com.github.breadmoirai.github-release") version "2.2.12"
 }
 
 
@@ -24,6 +25,7 @@ allprojects {
         plugin("java")
         plugin("net.researchgate.release")
         plugin("maven-publish")
+        plugin("com.github.breadmoirai.github-release")
     }
 
     repositories {
