@@ -649,7 +649,6 @@ subprojects {
         dependsOn("publish")
         val checkSumDir = File(project.buildDir, "checksums")
         val shouldExecute = project.hasProperty("release.releaseVersion")
-                && project.version.toString() == project.property("release.releaseVersion")
 
         val assets = getProjectFlavorSuffixes().map {
             getArtifactList(it)
@@ -657,6 +656,8 @@ subprojects {
         assets.filterNot { it.name.endsWith("md5") }.forEach {
             assets += File(checkSumDir, "${it.name}.md5")
         }
+
+        println("In configure for version:${project.name}  ${project.version}")
 
         if (shouldExecute) {
             project.extensions.configure(GithubReleaseExtension::class) {
