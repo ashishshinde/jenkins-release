@@ -69,6 +69,19 @@ allprojects {
         tagTemplate = "\$name-\$version"
     }
 
+    project.extensions.configure(com.github.breadmoirai.githubreleaseplugin.GithubReleaseExtension::class) {
+        token(System.getenv("GITHUB_TOKEN"))
+        owner("ashishshinde")
+        repo("jenkins-release")
+        tagName("${project.name}-$version")
+        val releaseName = project.name.split("-").map { it.capitalize() }
+            .joinToString (" ")
+        releaseName(releaseName)
+        body(File("").readText())
+        apiEndpoint("https://api.github.com")
+        client(OkHttpClient())
+    }
+
     dependencies {
         // Align versions of all Kotlin components
         implementation(platform("org.jetbrains.kotlin:kotlin-bom:1.5.0"))
