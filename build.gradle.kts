@@ -720,6 +720,7 @@ subprojects {
         dependsOn("publish")
 
         doLast {
+            println("@@@@@")
             com.aerospike.connect.gradle.GithubRelease.publishRelease(
                 githubReleaseConfiguration
             )
