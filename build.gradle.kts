@@ -20,6 +20,7 @@ import com.netflix.gradle.plugins.rpm.Rpm
 import groovy.util.Node
 import groovy.util.NodeList
 import net.researchgate.release.ReleaseExtension
+import org.apache.commons.io.FileUtils
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import org.redline_rpm.header.Os
 import org.redline_rpm.payload.Directive
@@ -645,41 +646,39 @@ subprojects {
      * Create the list of all assets to be uploaded to github.
      */
     task("prepareGithubReleaseTask", Task::class) {
-        project.extensions.configure(GithubReleaseExtension::class) {
-            val releaseVersion =
-                project.property("release.releaseVersion")
-            token(System.getenv("GITHUB_TOKEN"))
-            owner("ashishshinde")
-            repo("jenkins-release")
-            tagName("${project.name}-$releaseVersion")
+        if (project.hasProperty("release.releaseVersion")) {
+            project.extensions.configure(GithubReleaseExtension::class) {
+                val releaseVersion =
+                    project.property("release.releaseVersion")
+                token(System.getenv("GITHUB_TOKEN"))
+                owner("ashishshinde")
+                repo("jenkins-release")
+                tagName("${project.name}-$releaseVersion")
 
-            val releaseName = "${
-                project.name.split("-")
-                    .joinToString(" ") { it.capitalize() }
-            } $releaseVersion"
-            releaseName(releaseName)
+                val releaseName = "${
+                    project.name.split("-")
+                        .joinToString(" ") { it.capitalize() }
+                } $releaseVersion"
+                releaseName(releaseName)
 
 
-            if (project.hasProperty("releaseNotesFile")) {
-                body(
-                    File(
-                        project.property("releaseNotesFile").toString()
-                    ).readText()
-                )
-            }
+                if (project.hasProperty("releaseNotesFile")) {
+                    body(
+                        File(
+                            project.property("releaseNotesFile").toString()
+                        ).readText()
+                    )
+                }
 
-            apiEndpoint("https://api.github.com")
-            client(okhttp3.OkHttpClient())
-        }
+                apiEndpoint("https://api.github.com")
+                client(okhttp3.OkHttpClient())
 
-        println("Github release version: ${project.name} ${project.version}")
-        doLast {
-            if (project.hasProperty("release.releaseVersion")) {
                 println("Preparing assets for version:${project.name}  ${project.version}")
                 val assets = getProjectFlavorSuffixes().map {
                     getArtifactList(it)
                 }.flatten().map { it.first.asFile }.toMutableList()
                 val checkSumDir = File(project.buildDir, "checksums")
+                FileUtils.deleteDirectory(checkSumDir)
                 checkSumDir.mkdirs()
 
                 assets.filterNot { it.name.endsWith("md5") }.forEach {
@@ -696,13 +695,7 @@ subprojects {
                     checkSumDir.listFiles()?.toList() ?: emptyList<File>()
                 )
 
-                project.extensions.configure(GithubReleaseExtension::class) {
-                    println("Setting assets")
-                    releaseAssets(*assets.toTypedArray())
-                    releaseAssets.forEach {
-                        println("After setting: ${it.name}")
-                    }
-                }
+                releaseAssets(*assets.toTypedArray())
             }
         }
     }
