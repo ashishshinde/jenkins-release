@@ -23,14 +23,12 @@ data class GithubReleaseConfiguration(
     val releaseName: String = "",
     val body: String = "",
     val releaseAssets: List<File> = emptyList(),
-    val apiEndpoint: String = "",
-    val project: Project
+    val apiEndpoint: String = ""
 ) {
     companion object {
-        private var objectMapper: ObjectMapper
+        private var objectMapper: ObjectMapper = ObjectMapper()
 
         init {
-            objectMapper = ObjectMapper()
             objectMapper.registerModule(KotlinModule())
         }
 
@@ -53,20 +51,24 @@ data class GithubReleaseConfiguration(
 object GithubRelease {
     private val log = LoggerFactory.getLogger(GithubRelease::class.java)
 
-    fun publishRelease(githubReleaseConfiguration: GithubReleaseConfiguration) {
+    fun publishRelease(
+        githubReleaseConfiguration: GithubReleaseConfiguration,
+        project: Project
+    ) {
         GithubApi.setEndpoint(githubReleaseConfiguration.apiEndpoint)
         val authValue = "Token ${githubReleaseConfiguration.accessToken}"
         val api = GithubApi(authValue)
         GithubApi.client = OkHttpClient()
         createRelease(
             api,
-            githubReleaseConfiguration
+            githubReleaseConfiguration, project
         )
     }
 
     private fun createRelease(
         api: GithubApi,
-        githubReleaseConfiguration: GithubReleaseConfiguration
+        githubReleaseConfiguration: GithubReleaseConfiguration,
+        project: Project
     ) {
         val values = mapOf(
             "tag_name" to githubReleaseConfiguration.tagName,
@@ -97,8 +99,8 @@ object GithubRelease {
                 @Suppress("UNCHECKED_CAST")
                 uploadAssetsToUrl(
                     api,
-                    ((response.body as Map<String, Any>).get("upload_url")) as String,
-                    githubReleaseConfiguration.project,
+                    ((response.body as Map<String, Any>)["upload_url"]) as String,
+                    project,
                     githubReleaseConfiguration.releaseAssets
                 )
             }
