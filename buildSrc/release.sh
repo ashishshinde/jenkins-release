@@ -69,4 +69,4 @@ moduleDir=${module/aerospike-/}
 cd "$moduleDir" || exit
 
 # Run the release task
-../gradlew --no-daemon release githubRelease -Prelease.useAutomaticVersion=true -Prelease.releaseVersion=$version -PreleaseNotesFile="$releaseNotesFile" $releaseArgs
+../gradlew --no-daemon release publishGithubRelease -Prelease.useAutomaticVersion=true -Prelease.releaseVersion=$version -PreleaseNotesFile="$releaseNotesFile" $releaseArgs

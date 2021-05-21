@@ -9,11 +9,11 @@
 import com.aerospike.connect.gradle.AeroDeb
 import com.aerospike.connect.gradle.AeroRpm
 import com.aerospike.connect.gradle.DockerHub
+import com.aerospike.connect.gradle.GithubReleaseConfiguration
 import com.bmuschko.gradle.docker.DockerRegistryCredentials
 import com.bmuschko.gradle.docker.tasks.image.DockerBuildImage
 import com.bmuschko.gradle.docker.tasks.image.DockerPushImage
 import com.bmuschko.gradle.docker.tasks.image.DockerTagImage
-import com.github.breadmoirai.githubreleaseplugin.GithubReleaseExtension
 import com.netflix.gradle.plugins.deb.Deb
 import com.netflix.gradle.plugins.packaging.SystemPackagingTask
 import com.netflix.gradle.plugins.rpm.Rpm
@@ -243,10 +243,10 @@ subprojects {
 
     // Publish and prepare release artifacts before tagging.
     tasks.getByName("afterReleaseBuild")
-        .dependsOn("publish", "prepareGithubReleaseTask")
+        .dependsOn("publish", "prepareGithubRelease")
 
     // Create "github release" only after the release tasks complete but
-    // prepareGithubReleaseTask which runs before a release is tagged and new version is commited will ensure we use
+    // prepareGithubRelease which runs before a release is tagged and new version is commited will ensure we use
     // assets with the released version.
     tasks.getByName("githubRelease").dependsOn("release")
 
@@ -642,10 +642,13 @@ subprojects {
         return pomSuffixes
     }
 
+    var githubReleaseConfiguration: GithubReleaseConfiguration =
+        GithubReleaseConfiguration(project = project)
     /**
-     * Create the list of all assets to be uploaded to github.
+     * Create the list of all assets to be uploaded to github after builds but
+     * before the project version is incremented.
      */
-    task("prepareGithubReleaseTask", Task::class) {
+    task("prepareGithubRelease", Task::class) {
         dependsOn("publish")
         val checkSumDir = File(project.buildDir, "checksums")
         val shouldExecute = project.hasProperty("release.releaseVersion")
@@ -654,47 +657,45 @@ subprojects {
         val assets = getProjectFlavorSuffixes().map {
             getArtifactList(it)
         }.flatten().map { it.first.asFile }.toMutableList()
-        assets.filterNot { it.name.endsWith("md5") }.forEach {
-            assets += File(checkSumDir, "${it.name}.md5")
+
+        // Add checksum files.
+        assets += assets.filterNot { it.name.endsWith("md5") }.map {
+            File(checkSumDir, "${it.name}.md5")
         }
 
         if (shouldExecute) {
-            project.extensions.configure(GithubReleaseExtension::class) {
-                val releaseVersion =
-                    project.property("release.releaseVersion")
-                token(System.getenv("GITHUB_TOKEN"))
-                owner("ashishshinde")
-                repo("jenkins-release")
-                tagName("${project.name}-$releaseVersion")
+            val releaseVersion =
+                project.property("release.releaseVersion")
+            val releaseName = "${
+                project.name.split("-")
+                    .joinToString(" ") { it.capitalize() }
+            } $releaseVersion"
 
-                val releaseName = "${
-                    project.name.split("-")
-                        .joinToString(" ") { it.capitalize() }
-                } $releaseVersion"
-                releaseName(releaseName)
+            val body = if (project.hasProperty("releaseNotesFile")) {
 
+                File(
+                    project.property("releaseNotesFile").toString()
+                ).readText()
 
-                if (project.hasProperty("releaseNotesFile")) {
-                    body(
-                        File(
-                            project.property("releaseNotesFile").toString()
-                        ).readText()
-                    )
-                }
-
-                apiEndpoint("https://api.github.com")
-                client(okhttp3.OkHttpClient())
-
-                println("Preparing assets for version:${project.name}  ${project.version}")
-
-
-
-                releaseAssets(*assets.toTypedArray())
+            } else {
+                ""
             }
-
+            githubReleaseConfiguration = GithubReleaseConfiguration(
+                owner = "ashishshinde",
+                repo = "jenkins-release",
+                accessToken = System.getenv("GITHUB_TOKEN"),
+                tagName = "${project.name}-$releaseVersion",
+                targetCommitish = "master",
+                releaseName = releaseName,
+                body = body,
+                releaseAssets = assets,
+                apiEndpoint = "https://api.github.com",
+                project = project
+            )
         }
-        // Generate md5sums when this task executes
+
         doLast {
+            // Generate md5sums when this task executes
             FileUtils.deleteDirectory(checkSumDir)
             checkSumDir.mkdirs()
             assets.filterNot { it.name.endsWith("md5") }.filter { it.isFile }
@@ -708,6 +709,20 @@ subprojects {
                     )
 
                 }
+        }
+    }
+
+    /**
+     * Publish Github release.
+     */
+    task("publishGithubRelease", Task::class) {
+        // Ensure all assets are ready before publish.
+        dependsOn("publish")
+
+        doLast {
+            com.aerospike.connect.gradle.GithubRelease.publishRelease(
+                githubReleaseConfiguration
+            )
         }
     }
 
