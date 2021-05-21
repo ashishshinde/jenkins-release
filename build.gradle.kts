@@ -55,7 +55,7 @@ allprojects {
         jcenter()
     }
 
-    tasks.getByName("afterReleaseBuild").dependsOn("publish")
+    tasks.getByName("afterReleaseBuild").dependsOn("publish", "githubRelease")
 
     publishing {
         publications {
