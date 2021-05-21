@@ -643,53 +643,56 @@ subprojects {
      * Create the list of all assets to be uploaded to github.
      */
     task("prepareGithubReleaseTask", Task::class) {
-        if (project.hasProperty("release.releaseVersion")) {
-            val assets = getProjectFlavorSuffixes().map {
-                getArtifactList(it)
-            }.flatten().map { it.first.asFile }.toMutableList()
-            val checkSumDir = File(project.buildDir, "checksums")
-            checkSumDir.mkdirs()
+        doLast {
+            if (project.hasProperty("release.releaseVersion")) {
+                val assets = getProjectFlavorSuffixes().map {
+                    getArtifactList(it)
+                }.flatten().map { it.first.asFile }.toMutableList()
+                val checkSumDir = File(project.buildDir, "checksums")
+                checkSumDir.mkdirs()
 
-            assets.filterNot { it.name.endsWith("md5") }.forEach {
-                val checkSumFile = File(checkSumDir, "${it.name}.md5")
-                val hash = com.google.common.io.Files.asByteSource(it)
-                    .hash(com.google.common.hash.Hashing.md5())
-                com.google.common.io.Files.write(
-                    hash.toString().toByteArray(),
-                    checkSumFile
+                assets.filterNot { it.name.endsWith("md5") }.forEach {
+                    val checkSumFile = File(checkSumDir, "${it.name}.md5")
+                    val hash = com.google.common.io.Files.asByteSource(it)
+                        .hash(com.google.common.hash.Hashing.md5())
+                    com.google.common.io.Files.write(
+                        hash.toString().toByteArray(),
+                        checkSumFile
+                    )
+
+                    println("Checksum file $checkSumFile")
+                }
+                assets.addAll(
+                    checkSumDir.listFiles()?.toList() ?: emptyList<File>()
                 )
 
-                println("Checksum file $checkSumFile")
-            }
-            assets.addAll(
-                checkSumDir.listFiles()?.toList() ?: emptyList<File>()
-            )
+                checkSumDir.listFiles().forEach { println(it) }
+                project.extensions.configure(GithubReleaseExtension::class) {
+                    val releaseVersion =
+                        project.property("release.releaseVersion")
+                    token(System.getenv("GITHUB_TOKEN"))
+                    owner("ashishshinde")
+                    repo("jenkins-release")
+                    tagName("${project.name}-$releaseVersion")
 
-            checkSumDir.listFiles().forEach { println(it) }
-            project.extensions.configure(GithubReleaseExtension::class) {
-                val releaseVersion = project.property("release.releaseVersion")
-                token(System.getenv("GITHUB_TOKEN"))
-                owner("ashishshinde")
-                repo("jenkins-release")
-                tagName("${project.name}-$releaseVersion")
+                    val releaseName = "${
+                        project.name.split("-")
+                            .joinToString(" ") { it.capitalize() }
+                    } $releaseVersion"
+                    releaseName(releaseName)
 
-                val releaseName = "${
-                    project.name.split("-")
-                        .joinToString(" ") { it.capitalize() }
-                } $releaseVersion"
-                releaseName(releaseName)
+                    releaseAssets(*assets.toTypedArray())
+                    if (project.hasProperty("releaseNotesFile")) {
+                        body(
+                            File(
+                                project.property("releaseNotesFile").toString()
+                            ).readText()
+                        )
+                    }
 
-                releaseAssets(*assets.toTypedArray())
-                if (project.hasProperty("releaseNotesFile")) {
-                    body(
-                        File(
-                            project.property("releaseNotesFile").toString()
-                        ).readText()
-                    )
+                    apiEndpoint("https://api.github.com")
+                    client(okhttp3.OkHttpClient())
                 }
-
-                apiEndpoint("https://api.github.com")
-                client(okhttp3.OkHttpClient())
             }
         }
     }
