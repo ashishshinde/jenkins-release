@@ -8,34 +8,11 @@
  */
 
 include(
-    "aerospike",
-    "http-shim",
-    "inbound",
-    "io",
-    "jms-dump",
-    "jms-pool",
-    "jms-inbound",
-    "jms-loader",
-    "jms-outbound",
-    "kafka-inbound",
-    "kafka-loader",
-    "kafka-outbound",
-    "licensing",
-    "load-gen",
-    "logging",
-    "noop-outbound",
-    "outbound-server",
-    "pubsub-outbound",
-//    "pulsar-inbound",
-    "pulsar-outbound",
-    "serde",
-    "test",
-    "tls",
-    "undertow-patch",
-    "xdr-proxy"
+    "module1",
+    "module2"
 )
 
-rootProject.name = "aerospike-connect"
+rootProject.name = "aerospike-jenkins"
 
 // Add prefix to child project names.
 rootProject.children.forEach { it.name = "aerospike-" + it.name }
