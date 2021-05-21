@@ -642,7 +642,7 @@ subprojects {
     }
 
 
-    var githubReleaseConfigurationContainer =
+    val githubReleaseConfigurationContainer =
         object :
             org.jetbrains.kotlin.javax.inject.Provider<GithubReleaseConfiguration> {
             var value: GithubReleaseConfiguration? = null
@@ -705,9 +705,12 @@ subprojects {
                     project = project
                 )
             )
+
+            println("@@@@@ ####3 ${githubReleaseConfigurationContainer}")
+            println("@@@@@ ####3 ${githubReleaseConfigurationContainer.get()}")
+
         }
 
-        println("@@@@@ ####3 ${githubReleaseConfigurationContainer}")
         doLast {
             // Generate md5sums when this task executes
             FileUtils.deleteDirectory(checkSumDir)
@@ -735,6 +738,11 @@ subprojects {
 
         doLast {
             println("In do last")
+            println("@@@@@ ####3 ${githubReleaseConfigurationContainer}")
+            println(
+                "@@@@@ ####3 ${githubReleaseConfigurationContainer.get()}"
+            )
+
             com.aerospike.connect.gradle.GithubRelease.publishRelease(
                 githubReleaseConfigurationContainer.get()
             )
