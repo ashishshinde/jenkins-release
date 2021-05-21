@@ -642,8 +642,20 @@ subprojects {
         return pomSuffixes
     }
 
-    var githubReleaseConfiguration: GithubReleaseConfiguration =
-        GithubReleaseConfiguration(project = project)
+
+    var githubReleaseConfigurationContainer =
+        object :
+            org.jetbrains.kotlin.javax.inject.Provider<GithubReleaseConfiguration> {
+            var value: GithubReleaseConfiguration? = null
+            override fun get(): GithubReleaseConfiguration {
+                return value!!
+            }
+
+            fun set(githubReleaseConfiguration: GithubReleaseConfiguration) {
+                value = githubReleaseConfiguration
+            }
+        }
+
     /**
      * Create the list of all assets to be uploaded to github after builds but
      * before the project version is incremented.
@@ -680,17 +692,19 @@ subprojects {
             } else {
                 ""
             }
-            githubReleaseConfiguration = GithubReleaseConfiguration(
-                owner = "ashishshinde",
-                repo = "jenkins-release",
-                accessToken = System.getenv("GITHUB_TOKEN"),
-                tagName = "${project.name}-$releaseVersion",
-                targetCommitish = "master",
-                releaseName = releaseName,
-                body = body,
-                releaseAssets = assets,
-                apiEndpoint = "https://api.github.com",
-                project = project
+            githubReleaseConfigurationContainer.set(
+                GithubReleaseConfiguration(
+                    owner = "ashishshinde",
+                    repo = "jenkins-release",
+                    accessToken = System.getenv("GITHUB_TOKEN"),
+                    tagName = "${project.name}-$releaseVersion",
+                    targetCommitish = "master",
+                    releaseName = releaseName,
+                    body = body,
+                    releaseAssets = assets,
+                    apiEndpoint = "https://api.github.com",
+                    project = project
+                )
             )
         }
 
@@ -721,7 +735,7 @@ subprojects {
 
         doLast {
             com.aerospike.connect.gradle.GithubRelease.publishRelease(
-                githubReleaseConfiguration
+                githubReleaseConfigurationContainer.get()
             )
         }
     }

@@ -30,7 +30,7 @@ object GithubRelease {
 
     fun publishRelease(githubReleaseConfiguration: GithubReleaseConfiguration) {
         GithubApi.setEndpoint(githubReleaseConfiguration.apiEndpoint)
-        println("@@@@@ ${GithubApi.getEndpoint()}")
+        println("@@@@@ : ${GithubApi.getEndpoint()} :: $githubReleaseConfiguration")
         val authValue = "Token ${githubReleaseConfiguration.accessToken})"
         val api = GithubApi(authValue)
         GithubApi.client = OkHttpClient()
