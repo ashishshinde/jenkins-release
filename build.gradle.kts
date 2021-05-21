@@ -55,8 +55,6 @@ allprojects {
         jcenter()
     }
 
-    tasks.getByName("afterReleaseBuild").dependsOn("publish", "githubRelease")
-
     publishing {
         publications {
             create<MavenPublication>("maven") {
@@ -89,17 +87,29 @@ allprojects {
         tagTemplate = "\$name-\$version"
     }
 
+    tasks.getByName("afterReleaseBuild").dependsOn("publish")
+    tasks.getByName("githubRelease").mustRunAfter("release")
+
     project.extensions.configure(com.github.breadmoirai.githubreleaseplugin.GithubReleaseExtension::class) {
         token(System.getenv("GITHUB_TOKEN"))
         owner("ashishshinde")
         repo("jenkins-release")
-        tagName("${project.name}-$version")
-        val releaseName = project.name.split("-").map { it.capitalize() }
-            .joinToString (" ")
+        tagName("${project.name}-${project.version}")
+        val releaseName = "${
+            project.name.split("-").map { it.capitalize() }
+                .joinToString(" ")
+        } ${project.version}"
         releaseName(releaseName)
-        if (project.hasProperty("releaseNotesNile")) {
-            body(File(project.property("releaseNotesFile").toString()).readText())
+
+        if (project.hasProperty("releaseNotesFile")) {
+            body(
+                File(
+                    project.property("releaseNotesFile").toString()
+                ).readText()
+            )
         }
+
+        releaseAssets(project.artifacts)
         apiEndpoint("https://api.github.com")
         client(OkHttpClient())
     }
