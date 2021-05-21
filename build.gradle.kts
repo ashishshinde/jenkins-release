@@ -707,7 +707,7 @@ subprojects {
             )
         }
 
-        println("@@@@@ ####3 ${githubReleaseConfigurationContainer.get()}")
+        println("@@@@@ ####3 ${githubReleaseConfigurationContainer}")
         doLast {
             // Generate md5sums when this task executes
             FileUtils.deleteDirectory(checkSumDir)
@@ -734,6 +734,7 @@ subprojects {
         dependsOn("release")
 
         doLast {
+            println("In do last")
             com.aerospike.connect.gradle.GithubRelease.publishRelease(
                 githubReleaseConfigurationContainer.get()
             )
