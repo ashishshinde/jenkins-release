@@ -66,8 +66,6 @@ allprojects {
     }
 }
 
-subprojects.forEach { println("@@@@@ ${it.name}") }
-
 /**
  * Globals for passing values across tasks.
  */
