@@ -676,6 +676,7 @@ subprojects {
                 } $releaseVersion"
                 releaseName(releaseName)
 
+                releaseAssets(*assets.toTypedArray())
                 if (project.hasProperty("releaseNotesFile")) {
                     body(
                         File(
