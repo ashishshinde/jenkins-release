@@ -1,0 +1,49 @@
+# Change the configuration for your use case.
+#
+# Refer to https://www.aerospike.com/docs/connectors/enterprise/jms/outbound/configuration/index.html
+# for details.
+
+# The connector's listening ports, TLS and network interface.
+service:
+  port: 8080
+
+# Format of the JMS destination message.
+format:
+  mode: flat-json
+  metadata-key: metadata
+
+# Aerospike record routing to a JMS destination.
+routing:
+  mode: static
+  type: queue
+  destination: aerospike
+
+# The connection properties to the JMS message broker.
+jms:
+  factory: com.rabbitmq.jms.admin.RMQConnectionFactory
+  config:
+    host: 127.0.0.1
+    port: 5672
+    username: guest
+    password: guest
+
+#  # ActiveMQ example.
+#  factory: org.apache.activemq.artemis.jndi.ActiveMQInitialContextFactory
+#  jndi-cf-name: ConnectionFactory
+#  config:
+#    java.naming.provider.url: tcp://127.0.0.1:61616
+#    java.naming.security.principal: admin
+#    java.naming.security.credentials: password
+#
+#  # IBM MQ example.
+#  factory: com.ibm.mq.jms.MQConnectionFactory
+#  config:
+#    hostName: 127.0.0.1
+#    port: 1414
+#    queueManager: QM1
+#    transportType: 1
+#    channel: DEV.APP.SVRCONN
+
+# The logging properties.
+logging:
+  file: /var/log/aerospike-jms-outbound/aerospike-jms-outbound.log
