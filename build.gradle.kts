@@ -721,7 +721,7 @@ subprojects {
         doLast {
             println("In do last ${project.hashCode()}")
 
-            if (project.ext["githubReleaseConfiguration"] != null) {
+            if (project.ext.has("githubReleaseConfiguration")) {
                 println("@@@@@ ${project.hashCode()} ${project.ext["githubReleaseConfiguration"]}")
                 com.aerospike.connect.gradle.GithubRelease.publishRelease(
                     project.ext["githubReleaseConfiguration"] as GithubReleaseConfiguration
