@@ -693,7 +693,9 @@ subprojects {
                 )
 
                 checkSumDir.listFiles().forEach { println(it) }
-                releaseAssets(*assets.toTypedArray())
+                project.extensions.configure(GithubReleaseExtension::class) {
+                    releaseAssets(*assets.toTypedArray())
+                }
             }
         }
     }
