@@ -702,7 +702,6 @@ subprojects {
                 )
             )
 
-
             // Generate md5sums when this task executes
             FileUtils.deleteDirectory(checkSumDir)
             checkSumDir.mkdirs()
