@@ -698,7 +698,6 @@ subprojects {
                 )
 
             println("In prepare ${project.hashCode()} ${project.name} ${project.version}")
-            println("Value: ${project.ext["githubReleaseConfiguration"]}")
 
             // Generate md5sums when this task executes
             FileUtils.deleteDirectory(checkSumDir)
