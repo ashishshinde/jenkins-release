@@ -5,6 +5,7 @@
  */
 
 import net.researchgate.release.ReleaseExtension
+import okhttp3.OkHttpClient
 
 plugins {
     // Apply the Kotlin JVM plugin to add support for Kotlin.
