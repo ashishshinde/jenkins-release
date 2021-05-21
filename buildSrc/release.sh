@@ -52,9 +52,6 @@ echo "Releasing module:$module version:$version"
 echo "Args release-notes-file:$releaseNotesFile release-args:$releaseArgs"
 echo "--------------------------------------------------------------------------"
 
-# Make sure we are on the master branch
-git checkout master
-
 # Switch to module directory
 moduleDir=${module/aerospike-/}
 cd "$moduleDir"
