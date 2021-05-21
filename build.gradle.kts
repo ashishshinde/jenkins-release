@@ -648,20 +648,18 @@ subprojects {
      */
     task("prepareGithubRelease", Task::class) {
         dependsOn("publish")
-        val checkSumDir = File(project.buildDir, "checksums")
-        val shouldExecute = project.hasProperty("release.releaseVersion")
-                && project.version.toString() == project.property("release.releaseVersion")
 
-        val assets = getProjectFlavorSuffixes().map {
-            getArtifactList(it)
-        }.flatten().map { it.first.asFile }.toMutableList()
+        doLast {
+            val checkSumDir = File(project.buildDir, "checksums")
+            val assets = getProjectFlavorSuffixes().map {
+                getArtifactList(it)
+            }.flatten().map { it.first.asFile }.toMutableList()
 
-        // Add checksum files.
-        assets += assets.filterNot { it.name.endsWith("md5") }.map {
-            File(checkSumDir, "${it.name}.md5")
-        }
+            // Add checksum files.
+            assets += assets.filterNot { it.name.endsWith("md5") }.map {
+                File(checkSumDir, "${it.name}.md5")
+            }
 
-        if (shouldExecute) {
             val releaseVersion =
                 project.property("release.releaseVersion")
             val releaseName = "${
@@ -678,6 +676,7 @@ subprojects {
             } else {
                 ""
             }
+
             project.ext["githubReleaseConfiguration"] =
                 GithubReleaseConfiguration(
                     owner = "ashishshinde",
@@ -691,9 +690,10 @@ subprojects {
                     apiEndpoint = "https://api.github.com",
                     project = project
                 )
-        }
 
-        doLast {
+            println("In prepare ${project.hashCode()}")
+            println("Value: ${project.ext["githubReleaseConfiguration"]}")
+
             // Generate md5sums when this task executes
             FileUtils.deleteDirectory(checkSumDir)
             checkSumDir.mkdirs()
