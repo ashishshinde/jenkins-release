@@ -89,7 +89,7 @@ subprojects {
         jcenter()
         maven {
             url =
-                uri("https://maven.pkg.github.com/citrusleaf/aerospike-connect")
+                uri("https://maven.pkg.github.com/ashishshinde/jenkins-release")
             credentials {
                 username = pkgRepoUser
                 password = pkgRepoPassword
@@ -666,8 +666,8 @@ subprojects {
             project.extensions.configure(GithubReleaseExtension::class) {
                 val releaseVersion = project.property("release.releaseVersion")
                 token(System.getenv("GITHUB_TOKEN"))
-                owner("citrusleaf")
-                repo("aerospike-connect")
+                owner("ashishshinde")
+                repo("jenkins-release")
                 tagName("${project.name}-$releaseVersion")
 
                 val releaseName = "${
@@ -796,7 +796,7 @@ subprojects {
 
         publishing.repositories {
             val repositoryUrl =
-                uri("https://maven.pkg.github.com/citrusleaf/aerospike-connect")
+                uri("https://maven.pkg.github.com/ashishshinde/jenkins-release")
 
             maven {
                 name = "AerospikeMavenRepo"
