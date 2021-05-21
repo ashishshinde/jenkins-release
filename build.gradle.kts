@@ -646,6 +646,7 @@ subprojects {
      * Create the list of all assets to be uploaded to github.
      */
     task("prepareGithubReleaseTask", Task::class) {
+        dependsOn("publish")
         if (project.hasProperty("release.releaseVersion")
             && project.version.toString() == project.property("release.releaseVersion")
         ) {
