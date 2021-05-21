@@ -69,4 +69,4 @@ echo "--------------------------------------------------------------------------
 #cd "$moduleDir" || exit
 
 # Run the release task
-./gradlew --no-daemon ":$module:release" ":$module:"publishGithubRelease" -Prelease.useAutomaticVersion=true -Prelease.releaseVersion=$version -PreleaseNotesFile="$releaseNotesFile" $releaseArgs
+./gradlew --no-daemon ":$module:release" ":$module:publishGithubRelease" -Prelease.useAutomaticVersion=true -Prelease.releaseVersion=$version -PreleaseNotesFile="$releaseNotesFile" $releaseArgs
