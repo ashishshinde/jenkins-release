@@ -69,5 +69,4 @@ moduleDir=${module/aerospike-/}
 cd "$moduleDir"
 
 # Run the release task
-infraFile="$WORKSPACE/../../cirya-infra.yml"
-../gradlew --no-daemon release -Prelease.useAutomaticVersion=true -Prelease.releaseVersion=$version $releaseArgs
+../gradlew --no-daemon release -Prelease.useAutomaticVersion=true -Prelease.releaseVersion=$version -PreleaseNotesFile="$releaseNotesFile" $releaseArgs

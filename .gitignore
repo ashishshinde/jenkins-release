@@ -1,5 +1,32 @@
-# Ignore Gradle project-specific cache directory
-.gradle
-
-# Ignore Gradle build output directory
-build
+.project
+.settings
+.classpath
+.checkstyle
+.factorypath
+**/target
+*.jpage
+*.log
+features.conf
+pom.xml.*
+release.properties
+.gradle/
+.idea/
+build/
+out/
+*.tar
+*.zip
+*.jar
+*.deb
+*.rpm
+*.tgz
+*.tar.gz
+*~
+\#*\#
+.\#*
+mq*log.*
+*.tmp
+*.nar
+*.DS_Store
+cirya.yml
+AWSCLIV2.pkg
+connect-debian-10-aerospike-*-connector.dockerfile

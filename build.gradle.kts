@@ -7,6 +7,25 @@
 import net.researchgate.release.ReleaseExtension
 import okhttp3.OkHttpClient
 
+buildscript {
+    repositories {
+        maven {
+            url = uri("https://plugins.gradle.org/m2/")
+        }
+        jcenter()
+    }
+    dependencies {
+        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:1.4.0")
+        classpath("com.netflix.nebula:gradle-ospackage-plugin:8.3.0")
+        classpath("gradle.plugin.com.lazan:java-monkey-patch:1.0")
+        classpath("net.researchgate:gradle-release:2.6.0")
+        classpath("io.swagger:swagger-codegen:2.3.1")
+        classpath("com.github.jengelman.gradle.plugins:shadow:5.2.0")
+        classpath("gradle.plugin.io.github.http-builder-ng:http-plugin:0.1.1")
+        classpath("com.github.breadmoirai:github-release:2.2.12")
+    }
+}
+
 plugins {
     // Apply the Kotlin JVM plugin to add support for Kotlin.
     id("org.jetbrains.kotlin.jvm") version "1.3.72"
@@ -78,7 +97,9 @@ allprojects {
         val releaseName = project.name.split("-").map { it.capitalize() }
             .joinToString (" ")
         releaseName(releaseName)
-        body(File("").readText())
+        if (project.hasProperty("releaseNotesNile")) {
+            body(File(project.property("releaseNotesFile").toString()).readText())
+        }
         apiEndpoint("https://api.github.com")
         client(OkHttpClient())
     }
