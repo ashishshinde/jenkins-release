@@ -650,7 +650,7 @@ subprojects {
             val checkSumDir = File(project.buildDir, "checksums")
             checkSumDir.mkdirs()
 
-            assets.filter { it.name.endsWith("md5") }.forEach {
+            assets.filterNot { it.name.endsWith("md5") }.forEach {
                 val checkSumFile = File(checkSumDir, "${it.name}.md5")
                 val hash = com.google.common.io.Files.asByteSource(it)
                     .hash(com.google.common.hash.Hashing.md5())
@@ -658,6 +658,8 @@ subprojects {
                     hash.toString().toByteArray(),
                     checkSumFile
                 )
+
+                println("Checksum file $checkSumFile")
             }
             assets.addAll(
                 checkSumDir.listFiles()?.toList() ?: emptyList<File>()
