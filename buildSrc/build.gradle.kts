@@ -22,4 +22,5 @@ dependencies {
     api("com.squareup.okhttp3:okhttp:3.14.1")
     api("com.fasterxml.jackson.core:jackson-databind:2.12.3")
     api("com.github.breadmoirai:github-release:2.2.12")
+    api("com.fasterxml.jackson.module:jackson-module-kotlin:2.12.3")
 }

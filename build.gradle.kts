@@ -47,6 +47,7 @@ buildscript {
         classpath("com.github.jengelman.gradle.plugins:shadow:5.2.0")
         classpath("gradle.plugin.io.github.http-builder-ng:http-plugin:0.1.1")
         classpath("com.github.breadmoirai:github-release:2.2.12")
+        classpath("com.fasterxml.jackson.module:jackson-module-kotlin:2.12.3")
     }
 }
 
@@ -71,9 +72,7 @@ subprojects.forEach { println("@@@@@ ${it.name}") }
  * Globals for passing values across tasks.
  */
 val uuid: UUID = UUID.randomUUID()
-val githubReleaseConfigurations: MutableMap<String, GithubReleaseConfiguration> =
-    mutableMapOf()
-println("Wow ${System.identityHashCode(githubReleaseConfigurations)} $uuid")
+
 subprojects {
     apply {
         plugin(JavaPlugin::class.java)
@@ -650,6 +649,8 @@ subprojects {
     }
 
 
+    val githubReleaseConfigurationFile =
+        File(project.buildDir, "githubReleaseConfig.json")
     /**
      * Create the list of all assets to be uploaded to github after builds but
      * before the project version is incremented.
@@ -685,7 +686,9 @@ subprojects {
                 ""
             }
 
-            githubReleaseConfigurations[project.name] =
+
+            GithubReleaseConfiguration.toFile(
+                githubReleaseConfigurationFile,
                 GithubReleaseConfiguration(
                     owner = "ashishshinde",
                     repo = "jenkins-release",
@@ -698,14 +701,8 @@ subprojects {
                     apiEndpoint = "https://api.github.com",
                     project = project
                 )
-
-            println(
-                "In prepare ${
-                    System.identityHashCode(
-                        githubReleaseConfigurations
-                    )
-                } ${project.name} ${project.version}"
             )
+
 
             // Generate md5sums when this task executes
             FileUtils.deleteDirectory(checkSumDir)
@@ -732,34 +729,11 @@ subprojects {
         dependsOn("release")
 
         doLast {
-            println(
-                "In do last ${
-                    System.identityHashCode(
-                        githubReleaseConfigurations
-                    )
-                } ${project.name} ${project.version}"
+            com.aerospike.connect.gradle.GithubRelease.publishRelease(
+                GithubReleaseConfiguration.fromFile(
+                    githubReleaseConfigurationFile
+                )
             )
-
-            if (githubReleaseConfigurations[project.name] != null) {
-                println(
-                    "@@@@@ ${
-                        System.identityHashCode(
-                            githubReleaseConfigurations
-                        )
-                    } ${githubReleaseConfigurations[project.name]}"
-                )
-                com.aerospike.connect.gradle.GithubRelease.publishRelease(
-                    githubReleaseConfigurations[project.name]!!
-                )
-            } else {
-                println(
-                    "Skipping do last ${
-                        System.identityHashCode(
-                            githubReleaseConfigurations
-                        )
-                    } ${project.name} ${project.version}"
-                )
-            }
         }
     }
 

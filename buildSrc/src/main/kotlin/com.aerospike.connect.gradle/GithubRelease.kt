@@ -1,5 +1,7 @@
 package com.aerospike.connect.gradle
 
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.module.kotlin.KotlinModule
 import com.github.breadmoirai.githubreleaseplugin.GithubApi
 import okhttp3.OkHttpClient
 import org.gradle.api.Project
@@ -23,14 +25,36 @@ data class GithubReleaseConfiguration(
     val releaseAssets: List<File> = emptyList(),
     val apiEndpoint: String = "",
     val project: Project
-)
+) {
+    companion object {
+        private var objectMapper: ObjectMapper
+
+        init {
+            objectMapper = ObjectMapper()
+            objectMapper.registerModule(KotlinModule())
+        }
+
+        fun fromFile(file: File): GithubReleaseConfiguration {
+            return objectMapper.readValue(
+                file,
+                GithubReleaseConfiguration::class.java
+            )
+        }
+
+        fun toFile(
+            file: File,
+            githubReleaseConfiguration: GithubReleaseConfiguration
+        ) {
+            return objectMapper.writeValue(file, githubReleaseConfiguration)
+        }
+    }
+}
 
 object GithubRelease {
     private val log = LoggerFactory.getLogger(GithubRelease::class.java)
 
     fun publishRelease(githubReleaseConfiguration: GithubReleaseConfiguration) {
         GithubApi.setEndpoint(githubReleaseConfiguration.apiEndpoint)
-        println("@@@@@ : ${GithubApi.getEndpoint()} :: $githubReleaseConfiguration")
         val authValue = "Token ${githubReleaseConfiguration.accessToken}"
         val api = GithubApi(authValue)
         GithubApi.client = OkHttpClient()
