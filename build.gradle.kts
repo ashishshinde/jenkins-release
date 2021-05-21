@@ -92,19 +92,21 @@ allprojects {
 
     tasks.getByName("githubRelease").dependsOn("release")
     project.extensions.configure(GithubReleaseExtension::class) {
-        token(System.getenv("GITHUB_TOKEN"))
-        owner("ashishshinde")
-        repo("jenkins-release")
-        tagName("${project.name}-${project.version}")
-
         if (!project.hasProperty("release.releaseVersion")) {
             throw Exception("Project property release.releaseVersion not set")
         }
 
+        val releaseVersion = project.property("release.releaseVersion")
+        token(System.getenv("GITHUB_TOKEN"))
+        owner("ashishshinde")
+        repo("jenkins-release")
+        tagName("${project.name}-$releaseVersion")
+
+
         val releaseName = "${
             project.name.split("-").map { it.capitalize() }
                 .joinToString(" ")
-        } ${project.property("release.releaseVersion")}"
+        } $releaseVersion"
         releaseName(releaseName)
 
         if (project.hasProperty("releaseNotesFile")) {
