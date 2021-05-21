@@ -647,9 +647,18 @@ subprojects {
      */
     task("prepareGithubReleaseTask", Task::class) {
         dependsOn("publish")
-        if (project.hasProperty("release.releaseVersion")
-            && project.version.toString() == project.property("release.releaseVersion")
-        ) {
+        val checkSumDir = File(project.buildDir, "checksums")
+        val shouldExecute = project.hasProperty("release.releaseVersion")
+                && project.version.toString() == project.property("release.releaseVersion")
+
+        val assets = getProjectFlavorSuffixes().map {
+            getArtifactList(it)
+        }.flatten().map { it.first.asFile }.toMutableList()
+        assets.filterNot { it.name.endsWith("md5") }.forEach {
+            assets += File(checkSumDir, "${it.name}.md5")
+        }
+
+        if (shouldExecute) {
             project.extensions.configure(GithubReleaseExtension::class) {
                 val releaseVersion =
                     project.property("release.releaseVersion")
@@ -677,455 +686,454 @@ subprojects {
                 client(okhttp3.OkHttpClient())
 
                 println("Preparing assets for version:${project.name}  ${project.version}")
-                val assets = getProjectFlavorSuffixes().map {
-                    getArtifactList(it)
-                }.flatten().map { it.first.asFile }.toMutableList()
-                val checkSumDir = File(project.buildDir, "checksums")
-                FileUtils.deleteDirectory(checkSumDir)
-                checkSumDir.mkdirs()
 
-                assets.filterNot { it.name.endsWith("md5") }.forEach {
-                    val checkSumFile = File(checkSumDir, "${it.name}.md5")
-                    val hash = com.google.common.io.Files.asByteSource(it)
-                        .hash(com.google.common.hash.Hashing.md5())
-                    com.google.common.io.Files.write(
-                        hash.toString().toByteArray(),
-                        checkSumFile
-                    )
-                }
 
-                assets.addAll(
-                    checkSumDir.listFiles()?.toList() ?: emptyList<File>()
-                )
 
                 releaseAssets(*assets.toTypedArray())
             }
-        }
-    }
 
-    // Trigger http builds on all deb, rpm projects. Will be triggered only
-    // for the appropriate projects by deb-http and rpm-http tasks.
-    tasks.getByName("deb").dependsOn("deb-http")
-    tasks.getByName("rpm").dependsOn("rpm-http")
-
-    val publishing = (project.extensions["publishing"] as PublishingExtension)
-
-    publishing.publications {
-        /**
-         * Create maven publication for a project with suffix.
-         * @param projectSuffix the suffix for the project.
-         */
-        fun createPublication(
-            publicationContainer:
-            PublicationContainer,
-            projectSuffix: String
-        ) {
-            val isMainPom = projectSuffix.isEmpty()
-            val publicationName =
-                if (isMainPom) "mainArtifacts" else "${
-                    projectSuffix.removePrefix("-")
-                }Artifacts"
-
-            publicationContainer.create<MavenPublication>(publicationName) {
-                if (isMainPom) {
-                    from(components["java"])
-
-                    artifact(tasks.named<Jar>("testJar").get()) {
-                        classifier = "test"
-                        extension = "jar"
-                    }
-                }
-
-                // Look for a map from task name to classifier.
-                @Suppress("UNCHECKED_CAST") val zipTasks =
-                    if (project.extra.has("zipArtifactTasks"))
-                        project.extra["zipArtifactTasks"] as Map<String, String>
-                    else emptyMap()
-
-
-                zipTasks.forEach {
-                    artifact(tasks.named<Zip>(it.key).get()) {
-                        classifier = it.value
-                        extension = "zip"
-                    }
-                }
-
-                getArtifactList(projectSuffix).forEach { (file, type) ->
-                    artifact(
-                        com.aerospike.connect.gradle.PackagingPublishArtifact(
-                            file,
-                            project.version.toString(),
-                            type
+            // Generate md5sums when this task executes
+            doLast {
+                if (shouldExecute) {
+                    FileUtils.deleteDirectory(checkSumDir)
+                    checkSumDir.mkdirs()
+                    assets.filterNot { it.name.endsWith("md5") }.forEach {
+                        val checkSumFile = File(checkSumDir, "${it.name}.md5")
+                        val hash = com.google.common.io.Files.asByteSource(it)
+                            .hash(com.google.common.hash.Hashing.md5())
+                        com.google.common.io.Files.write(
+                            hash.toString().toByteArray(),
+                            checkSumFile
                         )
-                    )
-                }
-
-                pom {
-                    artifactId = project.name + projectSuffix
-                    name.set(project.name + projectSuffix)
-                    if (isMainPom) {
-                        withXml {
-                            val dependencies =
-                                (asNode().get(
-                                    "dependencies"
-                                ) as NodeList)[0]
-                                        as Node
-                            configurations["testCompileClasspath"]
-                                .resolvedConfiguration
-                                .firstLevelModuleDependencies.forEach {
-                                    val dependency =
-                                        dependencies.appendNode(
-                                            "dependency"
-                                        )
-                                    dependency.appendNode(
-                                        "groupId",
-                                        it.moduleGroup
-                                    )
-                                    dependency.appendNode(
-                                        "artifactId",
-                                        it.moduleName
-                                    )
-                                    dependency.appendNode(
-                                        "version",
-                                        it.moduleVersion
-                                    )
-                                    dependency.appendNode("scope", "test")
-                                }
-                        }
                     }
                 }
             }
         }
 
-        val container = this
-        project.afterEvaluate {
-            val pomSuffixes = getProjectFlavorSuffixes()
+        // Trigger http builds on all deb, rpm projects. Will be triggered only
+        // for the appropriate projects by deb-http and rpm-http tasks.
+        tasks.getByName("deb").dependsOn("deb-http")
+        tasks.getByName("rpm").dependsOn("rpm-http")
 
-            pomSuffixes.forEach {
-                createPublication(container, it)
-            }
-        }
+        val publishing =
+            (project.extensions["publishing"] as PublishingExtension)
 
-        publishing.repositories {
-            val repositoryUrl =
-                uri("https://maven.pkg.github.com/ashishshinde/jenkins-release")
-
-            maven {
-                name = "AerospikeMavenRepo"
-                url = repositoryUrl
-                credentials {
-                    username = pkgRepoUser
-                    password = pkgRepoPassword
-                }
-            }
-        }
-
-        tasks.withType<PublishToMavenRepository>().configureEach {
-            onlyIf {
-                // Upload is snap shot version.
-                // If a proper release version upload only when release task is
-                // present. This prevents re-releasing re builds of released
-                // version. This is just sanity because our repository fails
-                // re-upload of a released artifact.
-                isSnapshotVersion(project.version) || hasReleaseTask()
-            }
-
-            if (archiveTypes.isNotEmpty()) {
-                dependsOn(
-                    "testJar", "distZip", "distTar",
-                    "deb", "rpm", "deb-http", "rpm-http"
-                )
-            }
-        }
-
-        // Remove the packaging artifacts from library modules.
-        configurations.getByName("archives").artifacts.apply {
-            if (archiveTypes.isEmpty()) {
-                val toRemove = setOf("deb", "rpm")
-                removeAll(filter { toRemove.contains(it.type) })
-            }
-        }
-
-        // Bring latest snapshots.
-        configurations.all {
-            resolutionStrategy {
-                cacheChangingModulesFor(0, TimeUnit.SECONDS)
-            }
-        }
-    }
-
-    /**
-     * Check if we should build a docker image for the connector.
-     */
-    fun buildDockerImage() =
-        archiveTypes.contains("deb") && archiveTypes.contains("docker")
-
-    /**
-     * Build latest and http docker images and their Dockerfile using the deb
-     * file.
-     */
-    getProjectFlavorSuffixes().forEach { flavourSuffix ->
-
-        val debTaskName = "deb$flavourSuffix"
-        val debTasks =
-            tasks.filterIsInstance<Deb>().filter { deb ->
-                shouldPublishDebRpmTask(
-                    project,
-                    deb
-                ) && deb.name == debTaskName
-            }
-        if (buildDockerImage()) {
-            tasks.findByName("publishDocker") ?: run {
-                tasks.create("publishDocker")
-                tasks.getByName("publish").dependsOn("publishDocker")
-            }
-
-            val debOutput = debTasks.first().outputs
-
-            tasks.create("createDockerDir$flavourSuffix", Copy::class) {
-
-                onlyIf {
-                    buildDockerImage()
-                }
-
-                dependsOn(debTaskName)
-
-                into("build/docker$flavourSuffix")
-
-                from("pkg/install")
-                from(File(project.rootDir, "Dockerfile"))
-                from(debOutput)
-            }
-
-            val dockerHubRepository: String by project
-            val publicImageName =
-                "$dockerHubRepository/${project.name}$flavourSuffix"
-            val privateImageName = "$publicImageName-private"
-            val publicImageTag = project.version.toString()
-            val privateTestImageTag = "$publicImageTag-$uuid"
-
-            tasks.create(
-                "buildDockerImage$flavourSuffix",
-                DockerBuildImage::class
-            ) {
-                onlyIf {
-                    buildDockerImage()
-                }
-                dependsOn("createDockerDir$flavourSuffix")
-
-                // Using inputs and outputs to build image only when deb file
-                // has changed.
-                inputs.files(debOutput.files.first())
-
-                val outputFile =
-                    "${project.buildDir}/image$flavourSuffix.created"
-                outputs.files(outputFile)
-
-                inputDir = File("${project.buildDir}/docker$flavourSuffix")
-                noCache = true
-                pull = true
-
-                tags = setOf("$publicImageName:$publicImageTag")
-
-                buildArgs = mapOf(
-                    "PROJECT_NAME" to project.name,
-                    "ARCHIVE_FILE_NAME" to debOutput.files.first().name,
-                    "FLAVOUR_FLAG" to if (flavourSuffix == "") "" else "--http"
-                )
-
-                doLast {
-                    File(outputFile).writeText("hello_Stuti_and_Prayag")
-                }
-            }
-
-            val dockerHubUsername: String by project
-            val dockerHubPassword: String by project
-
-            fun createPushImageTask(
-                taskName: String, dependsOn: List<String>,
-                imageName:
-                String, imageTag: String,
-                onlyIf: Spec<Task>
-            ) {
-                tasks.create(taskName, DockerPushImage::class) {
-                    onlyIf(onlyIf)
-                    dependsOn(dependsOn, "buildDockerImage$flavourSuffix")
-
-                    this.imageName = imageName
-                    tag = imageTag
-                    registryCredentials =
-                        DockerRegistryCredentials().apply {
-                            username = dockerHubUsername
-                            password = dockerHubPassword
-                        }
-                }
-            }
-
-            fun dockerImagePushTask(isPrivate: Boolean) {
-                if (isPrivate) {
-                    tasks.create(
-                        "tagImageDockerHubTestPrivate$flavourSuffix",
-                        DockerTagImage::class
-                    ) {
-
-                        onlyIf { buildDockerImage() }
-                        dependsOn("buildDockerImage$flavourSuffix")
-                        imageId = "$publicImageName:$publicImageTag"
-                        tag = privateTestImageTag
-                        repository = privateImageName
-                    }
-                    tasks.create(
-                        "tagImageDockerHubPrivate$flavourSuffix",
-                        DockerTagImage::class
-                    ) {
-
-                        onlyIf { buildDockerImage() }
-                        dependsOn("buildDockerImage$flavourSuffix")
-                        imageId = "$publicImageName:$publicImageTag"
-                        tag = publicImageTag
-                        repository = privateImageName
-                    }
-                    createPushImageTask(
-                        "pushImageDockerHubPrivate$flavourSuffix",
-                        listOf("tagImageDockerHubPrivate$flavourSuffix"),
-                        privateImageName, publicImageTag
-                    ) {
-                        buildDockerImage() && (isPrivate || !isSnapshotVersion(
-                            project.version
-                        ))
-                    }
-                    createPushImageTask(
-                        "pushImageDockerHubTestPrivate$flavourSuffix",
-                        listOf("tagImageDockerHubTestPrivate$flavourSuffix"),
-                        privateImageName,
-                        privateTestImageTag
-                    ) { buildDockerImage() }
-                } else {
-                    createPushImageTask(
-                        "pushImageDockerHub$flavourSuffix",
-                        emptyList(), publicImageName, publicImageTag
-                    ) {
-                        buildDockerImage() && (!isSnapshotVersion(
-                            project.version
-                        ))
-                    }
-                }
-            }
-
-            dockerImagePushTask(false)
-            dockerImagePushTask(true)
-
-            tasks.create("prepareCiryaDockerFile$flavourSuffix") {
-                doLast {
-                    createDockerFileForConnector(
-                        privateImageName,
-                        flavourSuffix, uuid
-                    )
-                }
-            }
-
-            tasks.getByName("test") {
-                dependsOn(
-                    "prepareCiryaDockerFile$flavourSuffix",
-                    "pushImageDockerHubTestPrivate$flavourSuffix"
-                )
-            }
-
-            tasks.getByName("publishDocker") {
-                dependsOn(
-                    "pushImageDockerHub$flavourSuffix",
-                    "pushImageDockerHubPrivate$flavourSuffix"
-                )
-            }
-
-            tasks.create("deletePrivateDockerImage$flavourSuffix") {
-                onlyIf {
-                    buildDockerImage()
-                }
-                doLast {
-                    DockerHub.deleteTags(
-                        dockerHubUsername, dockerHubPassword,
-                        privateImageName, listOf(privateTestImageTag)
-                    )
-                }
-            }
-
-            tasks.create("deleteAllPrivateDockerImageTags$flavourSuffix") {
-                onlyIf {
-                    buildDockerImage()
-                }
-                doLast {
-                    DockerHub.deleteAllTags(
-                        dockerHubUsername,
-                        dockerHubPassword, privateImageName
-                    )
-                }
-            }
-
+        publishing.publications {
             /**
-             * Images should be cleaned up even if tests fail.
+             * Create maven publication for a project with suffix.
+             * @param projectSuffix the suffix for the project.
              */
-            tasks.getByName("test") {
-                finalizedBy("deletePrivateDockerImage$flavourSuffix")
+            fun createPublication(
+                publicationContainer:
+                PublicationContainer,
+                projectSuffix: String
+            ) {
+                val isMainPom = projectSuffix.isEmpty()
+                val publicationName =
+                    if (isMainPom) "mainArtifacts" else "${
+                        projectSuffix.removePrefix("-")
+                    }Artifacts"
+
+                publicationContainer.create<MavenPublication>(publicationName) {
+                    if (isMainPom) {
+                        from(components["java"])
+
+                        artifact(tasks.named<Jar>("testJar").get()) {
+                            classifier = "test"
+                            extension = "jar"
+                        }
+                    }
+
+                    // Look for a map from task name to classifier.
+                    @Suppress("UNCHECKED_CAST") val zipTasks =
+                        if (project.extra.has("zipArtifactTasks"))
+                            project.extra["zipArtifactTasks"] as Map<String, String>
+                        else emptyMap()
+
+
+                    zipTasks.forEach {
+                        artifact(tasks.named<Zip>(it.key).get()) {
+                            classifier = it.value
+                            extension = "zip"
+                        }
+                    }
+
+                    getArtifactList(projectSuffix).forEach { (file, type) ->
+                        artifact(
+                            com.aerospike.connect.gradle.PackagingPublishArtifact(
+                                file,
+                                project.version.toString(),
+                                type
+                            )
+                        )
+                    }
+
+                    pom {
+                        artifactId = project.name + projectSuffix
+                        name.set(project.name + projectSuffix)
+                        if (isMainPom) {
+                            withXml {
+                                val dependencies =
+                                    (asNode().get(
+                                        "dependencies"
+                                    ) as NodeList)[0]
+                                            as Node
+                                configurations["testCompileClasspath"]
+                                    .resolvedConfiguration
+                                    .firstLevelModuleDependencies.forEach {
+                                        val dependency =
+                                            dependencies.appendNode(
+                                                "dependency"
+                                            )
+                                        dependency.appendNode(
+                                            "groupId",
+                                            it.moduleGroup
+                                        )
+                                        dependency.appendNode(
+                                            "artifactId",
+                                            it.moduleName
+                                        )
+                                        dependency.appendNode(
+                                            "version",
+                                            it.moduleVersion
+                                        )
+                                        dependency.appendNode("scope", "test")
+                                    }
+                            }
+                        }
+                    }
+                }
+            }
+
+            val container = this
+            project.afterEvaluate {
+                val pomSuffixes = getProjectFlavorSuffixes()
+
+                pomSuffixes.forEach {
+                    createPublication(container, it)
+                }
+            }
+
+            publishing.repositories {
+                val repositoryUrl =
+                    uri("https://maven.pkg.github.com/ashishshinde/jenkins-release")
+
+                maven {
+                    name = "AerospikeMavenRepo"
+                    url = repositoryUrl
+                    credentials {
+                        username = pkgRepoUser
+                        password = pkgRepoPassword
+                    }
+                }
+            }
+
+            tasks.withType<PublishToMavenRepository>().configureEach {
+                onlyIf {
+                    // Upload is snap shot version.
+                    // If a proper release version upload only when release task is
+                    // present. This prevents re-releasing re builds of released
+                    // version. This is just sanity because our repository fails
+                    // re-upload of a released artifact.
+                    isSnapshotVersion(project.version) || hasReleaseTask()
+                }
+
+                if (archiveTypes.isNotEmpty()) {
+                    dependsOn(
+                        "testJar", "distZip", "distTar",
+                        "deb", "rpm", "deb-http", "rpm-http"
+                    )
+                }
+            }
+
+            // Remove the packaging artifacts from library modules.
+            configurations.getByName("archives").artifacts.apply {
+                if (archiveTypes.isEmpty()) {
+                    val toRemove = setOf("deb", "rpm")
+                    removeAll(filter { toRemove.contains(it.type) })
+                }
+            }
+
+            // Bring latest snapshots.
+            configurations.all {
+                resolutionStrategy {
+                    cacheChangingModulesFor(0, TimeUnit.SECONDS)
+                }
+            }
+        }
+
+        /**
+         * Check if we should build a docker image for the connector.
+         */
+        fun buildDockerImage() =
+            archiveTypes.contains("deb") && archiveTypes.contains("docker")
+
+        /**
+         * Build latest and http docker images and their Dockerfile using the deb
+         * file.
+         */
+        getProjectFlavorSuffixes().forEach { flavourSuffix ->
+
+            val debTaskName = "deb$flavourSuffix"
+            val debTasks =
+                tasks.filterIsInstance<Deb>().filter { deb ->
+                    shouldPublishDebRpmTask(
+                        project,
+                        deb
+                    ) && deb.name == debTaskName
+                }
+            if (buildDockerImage()) {
+                tasks.findByName("publishDocker") ?: run {
+                    tasks.create("publishDocker")
+                    tasks.getByName("publish").dependsOn("publishDocker")
+                }
+
+                val debOutput = debTasks.first().outputs
+
+                tasks.create("createDockerDir$flavourSuffix", Copy::class) {
+
+                    onlyIf {
+                        buildDockerImage()
+                    }
+
+                    dependsOn(debTaskName)
+
+                    into("build/docker$flavourSuffix")
+
+                    from("pkg/install")
+                    from(File(project.rootDir, "Dockerfile"))
+                    from(debOutput)
+                }
+
+                val dockerHubRepository: String by project
+                val publicImageName =
+                    "$dockerHubRepository/${project.name}$flavourSuffix"
+                val privateImageName = "$publicImageName-private"
+                val publicImageTag = project.version.toString()
+                val privateTestImageTag = "$publicImageTag-$uuid"
+
+                tasks.create(
+                    "buildDockerImage$flavourSuffix",
+                    DockerBuildImage::class
+                ) {
+                    onlyIf {
+                        buildDockerImage()
+                    }
+                    dependsOn("createDockerDir$flavourSuffix")
+
+                    // Using inputs and outputs to build image only when deb file
+                    // has changed.
+                    inputs.files(debOutput.files.first())
+
+                    val outputFile =
+                        "${project.buildDir}/image$flavourSuffix.created"
+                    outputs.files(outputFile)
+
+                    inputDir = File("${project.buildDir}/docker$flavourSuffix")
+                    noCache = true
+                    pull = true
+
+                    tags = setOf("$publicImageName:$publicImageTag")
+
+                    buildArgs = mapOf(
+                        "PROJECT_NAME" to project.name,
+                        "ARCHIVE_FILE_NAME" to debOutput.files.first().name,
+                        "FLAVOUR_FLAG" to if (flavourSuffix == "") "" else "--http"
+                    )
+
+                    doLast {
+                        File(outputFile).writeText("hello_Stuti_and_Prayag")
+                    }
+                }
+
+                val dockerHubUsername: String by project
+                val dockerHubPassword: String by project
+
+                fun createPushImageTask(
+                    taskName: String, dependsOn: List<String>,
+                    imageName:
+                    String, imageTag: String,
+                    onlyIf: Spec<Task>
+                ) {
+                    tasks.create(taskName, DockerPushImage::class) {
+                        onlyIf(onlyIf)
+                        dependsOn(dependsOn, "buildDockerImage$flavourSuffix")
+
+                        this.imageName = imageName
+                        tag = imageTag
+                        registryCredentials =
+                            DockerRegistryCredentials().apply {
+                                username = dockerHubUsername
+                                password = dockerHubPassword
+                            }
+                    }
+                }
+
+                fun dockerImagePushTask(isPrivate: Boolean) {
+                    if (isPrivate) {
+                        tasks.create(
+                            "tagImageDockerHubTestPrivate$flavourSuffix",
+                            DockerTagImage::class
+                        ) {
+
+                            onlyIf { buildDockerImage() }
+                            dependsOn("buildDockerImage$flavourSuffix")
+                            imageId = "$publicImageName:$publicImageTag"
+                            tag = privateTestImageTag
+                            repository = privateImageName
+                        }
+                        tasks.create(
+                            "tagImageDockerHubPrivate$flavourSuffix",
+                            DockerTagImage::class
+                        ) {
+
+                            onlyIf { buildDockerImage() }
+                            dependsOn("buildDockerImage$flavourSuffix")
+                            imageId = "$publicImageName:$publicImageTag"
+                            tag = publicImageTag
+                            repository = privateImageName
+                        }
+                        createPushImageTask(
+                            "pushImageDockerHubPrivate$flavourSuffix",
+                            listOf("tagImageDockerHubPrivate$flavourSuffix"),
+                            privateImageName, publicImageTag
+                        ) {
+                            buildDockerImage() && (isPrivate || !isSnapshotVersion(
+                                project.version
+                            ))
+                        }
+                        createPushImageTask(
+                            "pushImageDockerHubTestPrivate$flavourSuffix",
+                            listOf("tagImageDockerHubTestPrivate$flavourSuffix"),
+                            privateImageName,
+                            privateTestImageTag
+                        ) { buildDockerImage() }
+                    } else {
+                        createPushImageTask(
+                            "pushImageDockerHub$flavourSuffix",
+                            emptyList(), publicImageName, publicImageTag
+                        ) {
+                            buildDockerImage() && (!isSnapshotVersion(
+                                project.version
+                            ))
+                        }
+                    }
+                }
+
+                dockerImagePushTask(false)
+                dockerImagePushTask(true)
+
+                tasks.create("prepareCiryaDockerFile$flavourSuffix") {
+                    doLast {
+                        createDockerFileForConnector(
+                            privateImageName,
+                            flavourSuffix, uuid
+                        )
+                    }
+                }
+
+                tasks.getByName("test") {
+                    dependsOn(
+                        "prepareCiryaDockerFile$flavourSuffix",
+                        "pushImageDockerHubTestPrivate$flavourSuffix"
+                    )
+                }
+
+                tasks.getByName("publishDocker") {
+                    dependsOn(
+                        "pushImageDockerHub$flavourSuffix",
+                        "pushImageDockerHubPrivate$flavourSuffix"
+                    )
+                }
+
+                tasks.create("deletePrivateDockerImage$flavourSuffix") {
+                    onlyIf {
+                        buildDockerImage()
+                    }
+                    doLast {
+                        DockerHub.deleteTags(
+                            dockerHubUsername, dockerHubPassword,
+                            privateImageName, listOf(privateTestImageTag)
+                        )
+                    }
+                }
+
+                tasks.create("deleteAllPrivateDockerImageTags$flavourSuffix") {
+                    onlyIf {
+                        buildDockerImage()
+                    }
+                    doLast {
+                        DockerHub.deleteAllTags(
+                            dockerHubUsername,
+                            dockerHubPassword, privateImageName
+                        )
+                    }
+                }
+
+                /**
+                 * Images should be cleaned up even if tests fail.
+                 */
+                tasks.getByName("test") {
+                    finalizedBy("deletePrivateDockerImage$flavourSuffix")
+                }
             }
         }
     }
-}
 
-/**
- * Check if current project version is a snapshot version.
- */
-fun isSnapshotVersion(version: Any): Boolean {
-    return version.toString().endsWith("-SNAPSHOT")
-}
-
-/**
- * Check if we are running a release task.
- */
-fun hasReleaseTask(): Boolean {
-    val releaseTaskName = "afterReleaseBuild"
-    var hasRelease = false
-    gradle.taskGraph.allTasks.forEach {
-        if (it.name == releaseTaskName) {
-            hasRelease = true
-        }
+    /**
+     * Check if current project version is a snapshot version.
+     */
+    fun isSnapshotVersion(version: Any): Boolean {
+        return version.toString().endsWith("-SNAPSHOT")
     }
 
-    return hasRelease
-}
+    /**
+     * Check if we are running a release task.
+     */
+    fun hasReleaseTask(): Boolean {
+        val releaseTaskName = "afterReleaseBuild"
+        var hasRelease = false
+        gradle.taskGraph.allTasks.forEach {
+            if (it.name == releaseTaskName) {
+                hasRelease = true
+            }
+        }
 
-/**
- * Check if boolean property is set or not.
- */
-fun isSet(project: Project, property: String) =
-    (project.findProperty(property) as? String).equals("true", true)
+        return hasRelease
+    }
 
-/**
- * Create a docker file for the connector.
- */
-fun Project.createDockerFileForConnector(
-    privateImageName: String,
-    flavourSuffix: String,
-    uuid: UUID
-) {
-    val templateDir = "${project.rootDir}/test/src/test/data/docker/"
-    val templateFile = Paths.get(
-        "${templateDir}connect-debian-10-connector.dockerfile.ftl"
-    )
-    val charset = Charsets.UTF_8
-    var template = String(Files.readAllBytes(templateFile), charset)
-    template =
-        template.replace("connector-image-name", privateImageName)
-    template =
-        template.replace(
-            "connector-image-version",
-            project.version.toString().plus("-$uuid")
+    /**
+     * Check if boolean property is set or not.
+     */
+    fun isSet(project: Project, property: String) =
+        (project.findProperty(property) as? String).equals("true", true)
+
+    /**
+     * Create a docker file for the connector.
+     */
+    fun Project.createDockerFileForConnector(
+        privateImageName: String,
+        flavourSuffix: String,
+        uuid: UUID
+    ) {
+        val templateDir = "${project.rootDir}/test/src/test/data/docker/"
+        val templateFile = Paths.get(
+            "${templateDir}connect-debian-10-connector.dockerfile.ftl"
         )
-    Files.write(
-        Paths.get(
-            templateDir + "connect-debian-10-${project.name}$flavourSuffix-connector.dockerfile"
-        ),
-        template.toByteArray(charset)
-    )
-}
+        val charset = Charsets.UTF_8
+        var template = String(Files.readAllBytes(templateFile), charset)
+        template =
+            template.replace("connector-image-name", privateImageName)
+        template =
+            template.replace(
+                "connector-image-version",
+                project.version.toString().plus("-$uuid")
+            )
+        Files.write(
+            Paths.get(
+                templateDir + "connect-debian-10-${project.name}$flavourSuffix-connector.dockerfile"
+            ),
+            template.toByteArray(charset)
+        )
+    }
 
