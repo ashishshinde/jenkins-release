@@ -720,12 +720,13 @@ subprojects {
 
         doLast {
             println("In do last")
-            project.ext["githubReleaseConfiguration"]
             println("@@@@@ ####3 ${project.ext["githubReleaseConfiguration"]}")
 
-            com.aerospike.connect.gradle.GithubRelease.publishRelease(
-                project.ext["githubReleaseConfiguration"] as GithubReleaseConfiguration
-            )
+            if (project.ext["githubReleaseConfiguration"] != null) {
+                com.aerospike.connect.gradle.GithubRelease.publishRelease(
+                    project.ext["githubReleaseConfiguration"] as GithubReleaseConfiguration
+                )
+            }
         }
     }
 
