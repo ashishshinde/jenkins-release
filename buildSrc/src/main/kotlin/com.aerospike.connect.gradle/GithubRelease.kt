@@ -29,10 +29,11 @@ object GithubRelease {
     private val log = LoggerFactory.getLogger(GithubRelease::class.java)
 
     fun publishRelease(githubReleaseConfiguration: GithubReleaseConfiguration) {
-        GithubApi.client = OkHttpClient()
         GithubApi.setEndpoint(githubReleaseConfiguration.apiEndpoint)
+        println("@@@@@ ${GithubApi.getEndpoint()}")
         val authValue = "Token ${githubReleaseConfiguration.accessToken})"
         val api = GithubApi(authValue)
+        GithubApi.client = OkHttpClient()
         createRelease(
             api,
             githubReleaseConfiguration
