@@ -642,19 +642,6 @@ subprojects {
     }
 
 
-    val githubReleaseConfigurationContainer =
-        object :
-            org.jetbrains.kotlin.javax.inject.Provider<GithubReleaseConfiguration> {
-            var value: GithubReleaseConfiguration? = null
-            override fun get(): GithubReleaseConfiguration {
-                return value!!
-            }
-
-            fun set(githubReleaseConfiguration: GithubReleaseConfiguration) {
-                value = githubReleaseConfiguration
-            }
-        }
-
     /**
      * Create the list of all assets to be uploaded to github after builds but
      * before the project version is incremented.
@@ -691,7 +678,7 @@ subprojects {
             } else {
                 ""
             }
-            githubReleaseConfigurationContainer.set(
+            project.ext["githubReleaseConfiguration"] =
                 GithubReleaseConfiguration(
                     owner = "ashishshinde",
                     repo = "jenkins-release",
@@ -704,11 +691,6 @@ subprojects {
                     apiEndpoint = "https://api.github.com",
                     project = project
                 )
-            )
-
-            println("@@@@@ ####3 ${githubReleaseConfigurationContainer}")
-            println("@@@@@ ####3 ${githubReleaseConfigurationContainer.get()}")
-
         }
 
         doLast {
@@ -738,13 +720,11 @@ subprojects {
 
         doLast {
             println("In do last")
-            println("@@@@@ ####3 ${githubReleaseConfigurationContainer}")
-            println(
-                "@@@@@ ####3 ${githubReleaseConfigurationContainer.get()}"
-            )
+            project.ext["githubReleaseConfiguration"]
+            println("@@@@@ ####3 ${project.ext["githubReleaseConfiguration"]}")
 
             com.aerospike.connect.gradle.GithubRelease.publishRelease(
-                githubReleaseConfigurationContainer.get()
+                project.ext["githubReleaseConfiguration"] as GithubReleaseConfiguration
             )
         }
     }
