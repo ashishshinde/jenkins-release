@@ -647,58 +647,60 @@ subprojects {
      */
     task("prepareGithubReleaseTask", Task::class) {
         dependsOn("publish")
-        if (project.hasProperty("release.releaseVersion")
-            && project.version.toString() == project.property("release.releaseVersion")
-        ) {
-            project.extensions.configure(GithubReleaseExtension::class) {
-                val releaseVersion =
-                    project.property("release.releaseVersion")
-                token(System.getenv("GITHUB_TOKEN"))
-                owner("ashishshinde")
-                repo("jenkins-release")
-                tagName("${project.name}-$releaseVersion")
+        doLast {
+            if (project.hasProperty("release.releaseVersion")
+                && project.version.toString() == project.property("release.releaseVersion")
+            ) {
+                project.extensions.configure(GithubReleaseExtension::class) {
+                    val releaseVersion =
+                        project.property("release.releaseVersion")
+                    token(System.getenv("GITHUB_TOKEN"))
+                    owner("ashishshinde")
+                    repo("jenkins-release")
+                    tagName("${project.name}-$releaseVersion")
 
-                val releaseName = "${
-                    project.name.split("-")
-                        .joinToString(" ") { it.capitalize() }
-                } $releaseVersion"
-                releaseName(releaseName)
+                    val releaseName = "${
+                        project.name.split("-")
+                            .joinToString(" ") { it.capitalize() }
+                    } $releaseVersion"
+                    releaseName(releaseName)
 
 
-                if (project.hasProperty("releaseNotesFile")) {
-                    body(
-                        File(
-                            project.property("releaseNotesFile").toString()
-                        ).readText()
+                    if (project.hasProperty("releaseNotesFile")) {
+                        body(
+                            File(
+                                project.property("releaseNotesFile").toString()
+                            ).readText()
+                        )
+                    }
+
+                    apiEndpoint("https://api.github.com")
+                    client(okhttp3.OkHttpClient())
+
+                    println("Preparing assets for version:${project.name}  ${project.version}")
+                    val assets = getProjectFlavorSuffixes().map {
+                        getArtifactList(it)
+                    }.flatten().map { it.first.asFile }.toMutableList()
+                    val checkSumDir = File(project.buildDir, "checksums")
+                    FileUtils.deleteDirectory(checkSumDir)
+                    checkSumDir.mkdirs()
+
+                    assets.filterNot { it.name.endsWith("md5") }.forEach {
+                        val checkSumFile = File(checkSumDir, "${it.name}.md5")
+                        val hash = com.google.common.io.Files.asByteSource(it)
+                            .hash(com.google.common.hash.Hashing.md5())
+                        com.google.common.io.Files.write(
+                            hash.toString().toByteArray(),
+                            checkSumFile
+                        )
+                    }
+
+                    assets.addAll(
+                        checkSumDir.listFiles()?.toList() ?: emptyList<File>()
                     )
+
+                    releaseAssets(*assets.toTypedArray())
                 }
-
-                apiEndpoint("https://api.github.com")
-                client(okhttp3.OkHttpClient())
-
-                println("Preparing assets for version:${project.name}  ${project.version}")
-                val assets = getProjectFlavorSuffixes().map {
-                    getArtifactList(it)
-                }.flatten().map { it.first.asFile }.toMutableList()
-                val checkSumDir = File(project.buildDir, "checksums")
-                FileUtils.deleteDirectory(checkSumDir)
-                checkSumDir.mkdirs()
-
-                assets.filterNot { it.name.endsWith("md5") }.forEach {
-                    val checkSumFile = File(checkSumDir, "${it.name}.md5")
-                    val hash = com.google.common.io.Files.asByteSource(it)
-                        .hash(com.google.common.hash.Hashing.md5())
-                    com.google.common.io.Files.write(
-                        hash.toString().toByteArray(),
-                        checkSumFile
-                    )
-                }
-
-                assets.addAll(
-                    checkSumDir.listFiles()?.toList() ?: emptyList<File>()
-                )
-
-                releaseAssets(*assets.toTypedArray())
             }
         }
     }
