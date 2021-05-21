@@ -663,6 +663,7 @@ subprojects {
                 checkSumDir.listFiles()?.toList() ?: emptyList<File>()
             )
 
+            checkSumDir.listFiles().forEach { println(it) }
             project.extensions.configure(GithubReleaseExtension::class) {
                 val releaseVersion = project.property("release.releaseVersion")
                 token(System.getenv("GITHUB_TOKEN"))
