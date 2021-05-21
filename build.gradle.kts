@@ -691,7 +691,7 @@ subprojects {
                     project = project
                 )
 
-            println("In prepare ${project.hashCode()}")
+            println("In prepare ${project.hashCode()} ${project.name} ${project.version}")
             println("Value: ${project.ext["githubReleaseConfiguration"]}")
 
             // Generate md5sums when this task executes
@@ -719,7 +719,7 @@ subprojects {
         dependsOn("release")
 
         doLast {
-            println("In do last ${project.hashCode()}")
+            println("In do last ${project.hashCode()} ${project.name} ${project.version}")
 
             if (project.ext.has("githubReleaseConfiguration")) {
                 println("@@@@@ ${project.hashCode()} ${project.ext["githubReleaseConfiguration"]}")
@@ -727,7 +727,7 @@ subprojects {
                     project.ext["githubReleaseConfiguration"] as GithubReleaseConfiguration
                 )
             } else {
-                println("Skipping do last ${project.hashCode()}")
+                println("Skipping do last ${project.hashCode()} ${project.name} ${project.version}")
             }
         }
     }
