@@ -248,7 +248,6 @@ subprojects {
     // Create "github release" only after the release tasks complete but
     // prepareGithubRelease which runs before a release is tagged and new version is commited will ensure we use
     // assets with the released version.
-    tasks.getByName("githubRelease").dependsOn("release")
 
     /**
      * Common configuration for test tasks.
@@ -708,6 +707,7 @@ subprojects {
             )
         }
 
+        println("@@@@@ ####3 ${githubReleaseConfigurationContainer.get()}")
         doLast {
             // Generate md5sums when this task executes
             FileUtils.deleteDirectory(checkSumDir)
