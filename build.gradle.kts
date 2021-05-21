@@ -672,10 +672,10 @@ subprojects {
             client(okhttp3.OkHttpClient())
         }
 
-        println("Github release version: ${project.version}")
+        println("Github release version: ${project.name} ${project.version}")
         doLast {
             if (project.hasProperty("release.releaseVersion")) {
-                println("Preparing assets for version: ${project.version}")
+                println("Preparing assets for version:${project.name}  ${project.version}")
                 val assets = getProjectFlavorSuffixes().map {
                     getArtifactList(it)
                 }.flatten().map { it.first.asFile }.toMutableList()
@@ -699,6 +699,7 @@ subprojects {
                 project.extensions.configure(GithubReleaseExtension::class) {
                     println("Setting assets")
                     releaseAssets(*assets.toTypedArray())
+                    println("After setting: $releaseAssets")
                 }
             }
         }
