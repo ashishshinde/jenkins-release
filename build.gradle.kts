@@ -646,7 +646,9 @@ subprojects {
      * Create the list of all assets to be uploaded to github.
      */
     task("prepareGithubReleaseTask", Task::class) {
-        if (project.hasProperty("release.releaseVersion")) {
+        if (project.hasProperty("release.releaseVersion")
+            && project.version.toString() == project.property("release.releaseVersion")
+        ) {
             project.extensions.configure(GithubReleaseExtension::class) {
                 val releaseVersion =
                     project.property("release.releaseVersion")
