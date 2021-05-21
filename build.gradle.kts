@@ -64,7 +64,13 @@ allprojects {
         }
     }
 }
+
+/**
+ * Globals for passing values across tasks.
+ */
 val uuid: UUID = UUID.randomUUID()
+val githubReleaseConfigurations: MutableMap<String, GithubReleaseConfiguration> =
+    mutableMapOf()
 
 subprojects {
     apply {
@@ -677,7 +683,7 @@ subprojects {
                 ""
             }
 
-            project.ext["githubReleaseConfiguration"] =
+            githubReleaseConfigurations[project.name] =
                 GithubReleaseConfiguration(
                     owner = "ashishshinde",
                     repo = "jenkins-release",
@@ -721,10 +727,10 @@ subprojects {
         doLast {
             println("In do last ${project.hashCode()} ${project.name} ${project.version}")
 
-            if (project.ext.has("githubReleaseConfiguration")) {
-                println("@@@@@ ${project.hashCode()} ${project.ext["githubReleaseConfiguration"]}")
+            if (githubReleaseConfigurations[project.name] != null) {
+                println("@@@@@ ${project.hashCode()} ${githubReleaseConfigurations[project.name]}")
                 com.aerospike.connect.gradle.GithubRelease.publishRelease(
-                    project.ext["githubReleaseConfiguration"] as GithubReleaseConfiguration
+                    githubReleaseConfigurations[project.name]!!
                 )
             } else {
                 println("Skipping do last ${project.hashCode()} ${project.name} ${project.version}")
