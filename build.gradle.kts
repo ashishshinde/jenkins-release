@@ -71,7 +71,7 @@ allprojects {
 val uuid: UUID = UUID.randomUUID()
 val githubReleaseConfigurations: MutableMap<String, GithubReleaseConfiguration> =
     mutableMapOf()
-
+println("Wow $githubReleaseConfigurations $uuid")
 subprojects {
     apply {
         plugin(JavaPlugin::class.java)
