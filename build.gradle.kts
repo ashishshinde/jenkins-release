@@ -244,7 +244,9 @@ subprojects {
     tasks.getByName("afterReleaseBuild")
         .dependsOn("publish", "prepareGithubReleaseTask")
 
-    // Create "github release" only after the release tasks complete.
+    // Create "github release" only after the release tasks complete but
+    // prepareGithubReleaseTask which runs before a release is tagged and new version is commited will ensure we use
+    // assets with the released version.
     tasks.getByName("githubRelease").dependsOn("release")
 
     /**
@@ -670,8 +672,10 @@ subprojects {
             client(okhttp3.OkHttpClient())
         }
 
+        println("Github release version: ${project.version}")
         doLast {
             if (project.hasProperty("release.releaseVersion")) {
+                println("Preparing assets for version: ${project.version}")
                 val assets = getProjectFlavorSuffixes().map {
                     getArtifactList(it)
                 }.flatten().map { it.first.asFile }.toMutableList()
@@ -692,8 +696,8 @@ subprojects {
                     checkSumDir.listFiles()?.toList() ?: emptyList<File>()
                 )
 
-                checkSumDir.listFiles().forEach { println(it) }
                 project.extensions.configure(GithubReleaseExtension::class) {
+                    println("Setting assets")
                     releaseAssets(*assets.toTypedArray())
                 }
             }
