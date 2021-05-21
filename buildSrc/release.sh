@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 usage() {
-    cat <<EOF
+  cat <<EOF
 usage: bash release.sh --module aerospike-jms-outbound --version 1.1.0 --release-notes-file release-notes.md --release-args
   -m  (Required)          Module to release
   -v  (Required)          Version
@@ -14,49 +14,49 @@ EOF
 }
 
 while getopts m:v:n:a:h opt; do
-    case "$opt" in
-    m)
-        module=${OPTARG}
-        ;;
-    v)
-        version=${OPTARG}
-        ;;
-    n)
-        releaseNotesFile=${OPTARG}
-        ;;
-    a)
-        releaseArgs=${OPTARG}
-        ;;
-    h)
-        usage
-        exit 0
-        ;;
-    esac
+  case "$opt" in
+  m)
+    module=${OPTARG}
+    ;;
+  v)
+    version=${OPTARG}
+    ;;
+  n)
+    releaseNotesFile=${OPTARG}
+    ;;
+  a)
+    releaseArgs=${OPTARG}
+    ;;
+  h)
+    usage
+    exit 0
+    ;;
+  esac
 done
 
 if [ -z "$module" ]; then
-    echo "Module name is required"
-    exit
+  echo "Module name is required"
+  exit
 fi
 
 if [ -z "$version" ]; then
-    echo "Release version is required"
-    exit
+  echo "Release version is required"
+  exit
 fi
 
 if [ -z "$releaseNotesFile" ]; then
-    echo "Release notes file is required"
-    exit
+  echo "Release notes file is required"
+  exit
 fi
 
 if [ -z "$GITHUB_USERNAME" ]; then
-    echo "Github username environment variable GITHUB_USERNAME not set".
-    exit
+  echo "Github username environment variable GITHUB_USERNAME not set".
+  exit
 fi
 
 if [ -z "$GITHUB_TOKEN" ]; then
-    echo "Github access token environment variable GITHUB_TOKEN not set".
-    exit
+  echo "Github access token environment variable GITHUB_TOKEN not set".
+  exit
 fi
 
 echo "--------------------------------------------------------------------------"
@@ -69,4 +69,4 @@ moduleDir=${module/aerospike-/}
 cd "$moduleDir"
 
 # Run the release task
-../gradlew --no-daemon release -Prelease.useAutomaticVersion=true -Prelease.releaseVersion=$version -PreleaseNotesFile="$releaseNotesFile" $releaseArgs
+../gradlew --no-daemon release githubRelease -Prelease.useAutomaticVersion=true -Prelease.releaseVersion=$version -PreleaseNotesFile="$releaseNotesFile" $releaseArgs

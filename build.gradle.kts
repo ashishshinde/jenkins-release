@@ -4,6 +4,7 @@
  * This generated file contains a sample Kotlin library project to get you started.
  */
 
+import com.github.breadmoirai.githubreleaseplugin.GithubReleaseExtension
 import net.researchgate.release.ReleaseExtension
 import okhttp3.OkHttpClient
 
@@ -88,9 +89,9 @@ allprojects {
     }
 
     tasks.getByName("afterReleaseBuild").dependsOn("publish")
-    tasks.getByName("githubRelease").mustRunAfter(tasks.getByName("release"))
 
-    project.extensions.configure(com.github.breadmoirai.githubreleaseplugin.GithubReleaseExtension::class) {
+    tasks.getByName("githubRelease").dependsOn("release")
+    project.extensions.configure(GithubReleaseExtension::class) {
         token(System.getenv("GITHUB_TOKEN"))
         owner("ashishshinde")
         repo("jenkins-release")
