@@ -88,7 +88,7 @@ allprojects {
     }
 
     tasks.getByName("afterReleaseBuild").dependsOn("publish")
-    tasks.getByName("githubRelease").mustRunAfter("release")
+    tasks.getByName("githubRelease").mustRunAfter("release23423")
 
     project.extensions.configure(com.github.breadmoirai.githubreleaseplugin.GithubReleaseExtension::class) {
         token(System.getenv("GITHUB_TOKEN"))
