@@ -731,8 +731,8 @@ subprojects {
         doLast {
             com.aerospike.connect.gradle.GithubRelease.publishRelease(
                 GithubReleaseConfiguration.fromFile(
-                    githubReleaseConfigurationFile, project
-                )
+                    githubReleaseConfigurationFile
+                ), project
             )
         }
     }
