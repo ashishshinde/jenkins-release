@@ -71,7 +71,7 @@ allprojects {
 val uuid: UUID = UUID.randomUUID()
 val githubReleaseConfigurations: MutableMap<String, GithubReleaseConfiguration> =
     mutableMapOf()
-println("Wow $githubReleaseConfigurations $uuid")
+println("Wow ${System.identityHashCode(githubReleaseConfigurations)} $uuid")
 subprojects {
     apply {
         plugin(JavaPlugin::class.java)
@@ -697,7 +697,13 @@ subprojects {
                     project = project
                 )
 
-            println("In prepare ${githubReleaseConfigurations.hashCode()} ${project.name} ${project.version}")
+            println(
+                "In prepare ${
+                    System.identityHashCode(
+                        githubReleaseConfigurations
+                    )
+                } ${project.name} ${project.version}"
+            )
 
             // Generate md5sums when this task executes
             FileUtils.deleteDirectory(checkSumDir)
@@ -724,15 +730,33 @@ subprojects {
         dependsOn("release")
 
         doLast {
-            println("In do last ${githubReleaseConfigurations.hashCode()} ${project.name} ${project.version}")
+            println(
+                "In do last ${
+                    System.identityHashCode(
+                        githubReleaseConfigurations
+                    )
+                } ${project.name} ${project.version}"
+            )
 
             if (githubReleaseConfigurations[project.name] != null) {
-                println("@@@@@ ${githubReleaseConfigurations.hashCode()} ${githubReleaseConfigurations[project.name]}")
+                println(
+                    "@@@@@ ${
+                        System.identityHashCode(
+                            githubReleaseConfigurations
+                        )
+                    } ${githubReleaseConfigurations[project.name]}"
+                )
                 com.aerospike.connect.gradle.GithubRelease.publishRelease(
                     githubReleaseConfigurations[project.name]!!
                 )
             } else {
-                println("Skipping do last ${githubReleaseConfigurations.hashCode()} ${project.name} ${project.version}")
+                println(
+                    "Skipping do last ${
+                        System.identityHashCode(
+                            githubReleaseConfigurations
+                        )
+                    } ${project.name} ${project.version}"
+                )
             }
         }
     }
