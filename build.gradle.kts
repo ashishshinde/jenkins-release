@@ -719,13 +719,15 @@ subprojects {
         dependsOn("release")
 
         doLast {
-            println("In do last")
-            println("@@@@@ ####3 ${project.ext["githubReleaseConfiguration"]}")
+            println("In do last ${project.hashCode()}")
 
             if (project.ext["githubReleaseConfiguration"] != null) {
+                println("@@@@@ ${project.hashCode()} ${project.ext["githubReleaseConfiguration"]}")
                 com.aerospike.connect.gradle.GithubRelease.publishRelease(
                     project.ext["githubReleaseConfiguration"] as GithubReleaseConfiguration
                 )
+            } else {
+                println("Skipping do last ${project.hashCode()}")
             }
         }
     }
