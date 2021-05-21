@@ -95,10 +95,15 @@ allprojects {
         owner("ashishshinde")
         repo("jenkins-release")
         tagName("${project.name}-${project.version}")
+
+        if (!project.hasProperty("release.releaseVersion")) {
+            throw Exception("Project property release.releaseVersion not set")
+        }
+
         val releaseName = "${
             project.name.split("-").map { it.capitalize() }
                 .joinToString(" ")
-        } ${project.version}"
+        } ${project.property("release.releaseVersion")}"
         releaseName(releaseName)
 
         if (project.hasProperty("releaseNotesFile")) {
