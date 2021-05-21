@@ -698,8 +698,7 @@ subprojects {
                     releaseName = releaseName,
                     body = body,
                     releaseAssets = assets,
-                    apiEndpoint = "https://api.github.com",
-                    project = project
+                    apiEndpoint = "https://api.github.com"
                 )
             )
 
