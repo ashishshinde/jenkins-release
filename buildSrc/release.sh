@@ -65,8 +65,8 @@ echo "Args release-notes-file:$releaseNotesFile release-args:$releaseArgs"
 echo "--------------------------------------------------------------------------"
 
 # Switch to module directory
-#moduleDir=${module/aerospike-/}
-#cd "$moduleDir" || exit
+moduleDir=${module/aerospike-/}
+cd "$moduleDir" || exit
 
 # Run the release task
-./gradlew --no-daemon ":$module:release" ":$module:publishGithubRelease" -Prelease.useAutomaticVersion=true -Prelease.releaseVersion=$version -PreleaseNotesFile="$releaseNotesFile" $releaseArgs
+../gradlew --no-daemon release publishGithubRelease -Prelease.useAutomaticVersion=true -Prelease.releaseVersion=$version -PreleaseNotesFile="$releaseNotesFile" $releaseArgs
